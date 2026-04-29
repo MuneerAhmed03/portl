@@ -4,7 +4,8 @@
   "private": true,
   "description": "Portl monorepo",
   "workspaces": [
-    "portl-core"
+    "portl-core",
+    "portl-cli"
   ],
   "scripts": {
     "build": "npm run build --workspace=portl-core",
