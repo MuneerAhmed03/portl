@@ -1,0 +1,14 @@
+{
+  "name": "portl-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portl monorepo",
+  "workspaces": [
+    "portl-core"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=portl-core",
+    "dev": "npm run dev --workspace=portl-core",
+    "test": "npm run test --workspace=portl-core"
+  }
+}
