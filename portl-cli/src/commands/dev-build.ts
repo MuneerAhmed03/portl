@@ -8,6 +8,7 @@ import { ensureKeystore, signApk } from '../utils/keystore.js';
 import { getLocalIP } from '../utils/network.js';
 import { loadOrCreateConfig } from '../utils/portlConfig.js';
 import { getVersionInfo } from '../utils/versioning.js';
+import { bundleDrizzleMigrations } from '../utils/drizzleMigrations.js';
 
 interface CliOptions {
   verbose?: boolean;
@@ -36,6 +37,14 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
     const localIP = getLocalIP();
     const devUrl = `http://${localIP}:5173`;
     const versionInfo = getVersionInfo(packageJson, config);
+
+    spinner = ora('Bundling Drizzle migrations...').start();
+    const drizzleBundle = await bundleDrizzleMigrations(cwd);
+    if (drizzleBundle.status === 'skipped') {
+      spinner.succeed('No Drizzle migrations to bundle');
+    } else {
+      spinner.succeed(`Drizzle migrations ${drizzleBundle.status}`);
+    }
 
     spinner = ora('Packaging APK...').start();
     const assetsDir = path.resolve(__dirname, '../assets');

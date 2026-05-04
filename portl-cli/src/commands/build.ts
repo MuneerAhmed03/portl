@@ -14,6 +14,7 @@ import {
 import { ensureKeystore, signApk } from '../utils/keystore.js';
 import { loadOrCreateConfig, saveConfig } from '../utils/portlConfig.js';
 import { getVersionInfo } from '../utils/versioning.js';
+import { bundleDrizzleMigrations } from '../utils/drizzleMigrations.js';
 
 interface CliOptions {
   verbose?: boolean;
@@ -42,6 +43,14 @@ export async function buildCommand(options: CliOptions): Promise<void> {
 
     const packageJson = (await fs.readJSON(packageJsonPath)) as ProjectPackageJson;
     const config = await loadOrCreateConfig(cwd);
+
+    spinner = ora('Bundling Drizzle migrations...').start();
+    const drizzleBundle = await bundleDrizzleMigrations(cwd);
+    if (drizzleBundle.status === 'skipped') {
+      spinner.succeed('No Drizzle migrations to bundle');
+    } else {
+      spinner.succeed(`Drizzle migrations ${drizzleBundle.status}`);
+    }
 
     spinner = ora('Building web app...').start();
     await runWebBuild(cwd, packageJson);

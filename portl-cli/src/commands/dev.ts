@@ -2,6 +2,7 @@ import path from 'node:path';
 import chalk from 'chalk';
 import { execa } from 'execa';
 import fs from 'fs-extra';
+import { bundleDrizzleMigrations } from '../utils/drizzleMigrations.js';
 
 export async function devCommand(): Promise<void> {
   const cwd = process.cwd();
@@ -17,6 +18,7 @@ export async function devCommand(): Promise<void> {
       throw new Error('Vite not found. Run: npm install vite');
     }
 
+    await bundleDrizzleMigrations(cwd);
     await execa(vitePath, [], { cwd, stdio: 'inherit' });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
