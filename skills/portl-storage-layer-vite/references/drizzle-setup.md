@@ -15,7 +15,7 @@ src/data/
   bootstrap.ts
   db/schema.ts
   db/client.ts
-  db/migrations.json
+  db/migrations.generated.ts
   repositories/noteRepository.ts
   storage/preferences.ts
 drizzle.config.ts
@@ -47,18 +47,29 @@ export const db = createDB(schema)
 
 ## Migrations and bootstrap
 
-`portl/drizzle` expects migration objects shaped like:
+Generate Drizzle migrations first, then bundle them for Portl's browser/Android runtime:
+
+```bash
+npx drizzle-kit generate
+npx portl drizzle bundle
+```
+
+The bundler writes `src/data/db/migrations.generated.ts` by default. It uses `.portl/drizzle-bundle-state.json` to skip parsing and writing when Drizzle inputs have not changed.
+
+`portl/drizzle` accepts migration objects shaped like:
 - `sql: string[]`
 - `folderMillis: number`
 - `hash: string`
 - `bps: boolean`
+- `idx?: number`
+- `tag?: string`
 
 Example bootstrap:
 
 ```ts
 // src/data/bootstrap.ts
 import { initDB } from 'portl/drizzle'
-import migrations from './db/migrations.json'
+import migrations from './db/migrations.generated'
 
 let bootstrapPromise: Promise<void> | null = null
 
@@ -105,4 +116,3 @@ Use `Storage` for app preferences and lightweight keys, even when relational dat
 3. Repositories hide Drizzle specifics from UI components.
 4. `Storage` wrappers are typed and namespaced.
 5. No duplicated schema constants across files.
-
