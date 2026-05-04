@@ -39,8 +39,8 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
 
     spinner = ora('Packaging APK...').start();
     const assetsDir = path.resolve(__dirname, '../assets');
-    const devShellApkPath = path.join(assetsDir, 'portl-shell-dev.apk');
-    const zip = openApk(devShellApkPath);
+    const shellApkPath = await resolveDevShellApkPath(assetsDir);
+    const zip = openApk(shellApkPath);
     zip.addFile(
       'assets/www/portl-config.json',
       Buffer.from(JSON.stringify({ devUrl }), 'utf8'),
@@ -83,4 +83,20 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
     }
     process.exitCode = 1;
   }
+}
+
+async function resolveDevShellApkPath(assetsDir: string): Promise<string> {
+  const devShellApkPath = path.join(assetsDir, 'portl-shell-dev.apk');
+  if (await fs.pathExists(devShellApkPath)) {
+    return devShellApkPath;
+  }
+
+  const fullShellApkPath = path.join(assetsDir, 'portl-shell-full.apk');
+  if (await fs.pathExists(fullShellApkPath)) {
+    return fullShellApkPath;
+  }
+
+  throw new Error(
+    'Shell APK not found. Expected dist/assets/portl-shell-dev.apk or dist/assets/portl-shell-full.apk.',
+  );
 }
