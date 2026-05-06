@@ -39,10 +39,11 @@ export const schema = { notes }
 
 ```ts
 // src/data/db/client.ts
-import { createDB } from 'portl/drizzle'
+import { createPortlDrizzle } from 'portl/drizzle'
+import migrations from './migrations.generated'
 import { schema } from './schema'
 
-export const db = createDB(schema)
+export const db = createPortlDrizzle({ schema, migrations })
 ```
 
 ## Migrations and bootstrap
@@ -64,22 +65,7 @@ The bundler writes `src/data/db/migrations.generated.ts` by default. It uses `.p
 - `idx?: number`
 - `tag?: string`
 
-Example bootstrap:
-
-```ts
-// src/data/bootstrap.ts
-import { initDB } from 'portl/drizzle'
-import migrations from './db/migrations.generated'
-
-let bootstrapPromise: Promise<void> | null = null
-
-export function bootstrapDataLayer(): Promise<void> {
-  if (!bootstrapPromise) {
-    bootstrapPromise = initDB({ migrations })
-  }
-  return bootstrapPromise
-}
-```
+`createPortlDrizzle({ schema, migrations })` runs migrations lazily before the first query, so repositories can use the exported `db` like a normal Drizzle client.
 
 ## Repository pattern (Drizzle path)
 
@@ -88,15 +74,12 @@ export function bootstrapDataLayer(): Promise<void> {
 import { desc } from 'drizzle-orm'
 import { db } from '../db/client'
 import { notes } from '../db/schema'
-import { bootstrapDataLayer } from '../bootstrap'
 
 export async function listNotes() {
-  await bootstrapDataLayer()
   return db.select().from(notes).orderBy(desc(notes.createdAt))
 }
 
 export async function createNote(input: { title: string; body: string }) {
-  await bootstrapDataLayer()
   await db.insert(notes).values({
     title: input.title,
     body: input.body,
@@ -111,7 +94,7 @@ Use `Storage` for app preferences and lightweight keys, even when relational dat
 
 ## Drizzle-mode review checklist
 
-1. `bootstrapDataLayer()` is called before repositories run.
+1. `db` is created with `createPortlDrizzle({ schema, migrations })`.
 2. Migrations are committed and versioned with the app.
 3. Repositories hide Drizzle specifics from UI components.
 4. `Storage` wrappers are typed and namespaced.
