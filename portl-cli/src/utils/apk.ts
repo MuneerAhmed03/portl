@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
+import { validatePackageName } from './packageName.js';
 
 // TODO: Replace placeholder APK files in src/assets/ with real build outputs from portl-shell.
 // All APK manipulation logic is fully implemented and will work once real APKs are provided.
@@ -37,6 +38,7 @@ export function injectDirectory(zip: AdmZip, sourceDir: string, targetPrefix: st
 }
 
 export function patchManifest(zip: AdmZip, patches: ManifestPatches): void {
+  validateManifestPatches(patches);
   const manifestEntry = zip.getEntry('AndroidManifest.xml');
   if (!manifestEntry) {
     throw new Error('APK manifest not found: AndroidManifest.xml');
@@ -48,6 +50,18 @@ export function patchManifest(zip: AdmZip, patches: ManifestPatches): void {
   replaceUtf16Fixed(manifestBuffer, VERSION_NAME_PLACEHOLDER, patches.versionName, 32);
   replaceInt32LE(manifestBuffer, VERSION_CODE_PLACEHOLDER, patches.versionCode);
   zip.updateFile(manifestEntry.entryName, manifestBuffer);
+}
+
+function validateManifestPatches(patches: ManifestPatches): void {
+  validatePackageName(patches.packageName);
+  validateMaxChars('appLabel', patches.appLabel, 64);
+  validateMaxChars('versionName', patches.versionName, 32);
+}
+
+function validateMaxChars(label: string, value: string, maxChars: number): void {
+  if (value.length > maxChars) {
+    throw new Error(`Android ${label} must be ${maxChars} characters or fewer.`);
+  }
 }
 
 export function getApkBuffer(zip: AdmZip): Buffer {

@@ -19,7 +19,10 @@ export async function devCommand(): Promise<void> {
     }
 
     await bundleDrizzleMigrations(cwd);
-    await execa(vitePath, [], { cwd, stdio: 'inherit' });
+    await execa(vitePath, ['--host', '0.0.0.0', '--port', '5173', '--strictPort'], {
+      cwd,
+      stdio: 'inherit',
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(chalk.red(message));

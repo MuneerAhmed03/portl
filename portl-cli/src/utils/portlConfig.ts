@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'node:path';
-import { derivePackageName } from './packageName.js';
+import { derivePackageName, validatePackageName } from './packageName.js';
 
 export interface PortlConfig {
   packageName: string;
@@ -23,7 +23,9 @@ export function getConfigPath(cwd: string): string {
 export async function loadOrCreateConfig(cwd: string): Promise<PortlConfig> {
   const configPath = getConfigPath(cwd);
   if (await fs.pathExists(configPath)) {
-    return fs.readJSON(configPath) as Promise<PortlConfig>;
+    const config = (await fs.readJSON(configPath)) as PortlConfig;
+    validatePackageName(config.packageName);
+    return config;
   }
 
   const packageJsonPath = path.join(cwd, 'package.json');
@@ -38,6 +40,7 @@ export async function loadOrCreateConfig(cwd: string): Promise<PortlConfig> {
     versionCode: 1,
     keystorePath: KEYSTORE_RELATIVE_PATH.replaceAll('\\', '/'),
   };
+  validatePackageName(config.packageName);
 
   await fs.ensureDir(path.join(cwd, PORTL_DIR));
   await saveConfig(cwd, config);
