@@ -16,6 +16,8 @@ program
   .command('build')
   .description('Build a production APK')
   .option('--verbose', 'Show full error stack traces')
+  .option('--builder-image <image>', 'Builder container image to use')
+  .option('--no-pull', 'Skip docker pull and use the local builder image cache')
   .action(buildCommand);
 
 program

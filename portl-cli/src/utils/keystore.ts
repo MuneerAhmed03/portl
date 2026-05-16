@@ -9,8 +9,24 @@ export interface KeystoreInfo {
   certificate: forge.pki.Certificate;
 }
 
-const KEYSTORE_PASSWORD = '';
-const KEYSTORE_ALIAS = 'portl';
+export interface KeystoreSigningConfig {
+  alias: string;
+  storePassword: string;
+  keyPassword: string;
+}
+
+export const DEFAULT_KEYSTORE_PASSWORD = '';
+export const DEFAULT_KEYSTORE_ALIAS = 'portl';
+const KEYSTORE_PASSWORD = DEFAULT_KEYSTORE_PASSWORD;
+const KEYSTORE_ALIAS = DEFAULT_KEYSTORE_ALIAS;
+
+export function getDefaultKeystoreSigningConfig(): KeystoreSigningConfig {
+  return {
+    alias: KEYSTORE_ALIAS,
+    storePassword: KEYSTORE_PASSWORD,
+    keyPassword: KEYSTORE_PASSWORD,
+  };
+}
 
 export async function ensureKeystore(portlDir: string): Promise<KeystoreInfo> {
   const keystorePath = path.join(portlDir, 'keystore', 'release.p12');
