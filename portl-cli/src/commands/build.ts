@@ -19,6 +19,7 @@ interface CliOptions {
   builderImage?: string;
   noPull?: boolean;
   pull?: boolean;
+  webviewDebug?: boolean;
 }
 
 interface ProjectPackageJson {
@@ -34,6 +35,7 @@ interface BuilderMetadata {
   appLabel: string;
   versionCode: number;
   versionName: string;
+  webViewDebug: boolean;
   keystore: {
     path: string;
     alias: string;
@@ -93,6 +95,7 @@ export async function buildCommand(options: CliOptions): Promise<void> {
       appLabel: packageJson.name ?? 'portl-app',
       versionCode: versionInfo.versionCode,
       versionName: versionInfo.versionName,
+      webViewDebug: options.webviewDebug === true,
       keystorePath,
     });
 
@@ -208,6 +211,7 @@ async function prepareBuilderInput(params: {
   appLabel: string;
   versionCode: number;
   versionName: string;
+  webViewDebug: boolean;
   keystorePath: string;
 }): Promise<BuilderIO> {
   const rootDir = path.join(params.cwd, CONTAINER_BUILD_DIR);
@@ -233,6 +237,7 @@ async function prepareBuilderInput(params: {
     appLabel: params.appLabel,
     versionCode: params.versionCode,
     versionName: params.versionName,
+    webViewDebug: params.webViewDebug,
     keystore: {
       path: path.posix.join('keystore', copiedKeystoreName),
       alias: signing.alias,

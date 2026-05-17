@@ -18,6 +18,7 @@ program
   .option('--verbose', 'Show full error stack traces')
   .option('--builder-image <image>', 'Builder container image to use')
   .option('--no-pull', 'Skip docker pull and use the local builder image cache')
+  .option('--webview-debug', 'Enable WebView remote debugging in the built APK')
   .action(buildCommand);
 
 program
