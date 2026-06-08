@@ -30,6 +30,9 @@ program
   .command('dev-build')
   .description('Build a dev APK that loads from your local dev server')
   .option('--verbose', 'Show full error stack traces')
+  .option('--builder-image <image>', 'Builder container image to use')
+  .option('--no-pull', 'Skip docker pull and use the local builder image cache')
+  .option('--no-webview-debug', 'Disable WebView remote debugging in the dev APK')
   .action(devBuildCommand);
 
 const drizzle = program.command('drizzle').description('Drizzle integration utilities');

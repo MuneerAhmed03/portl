@@ -22,7 +22,7 @@ interface CliOptions {
   webviewDebug?: boolean;
 }
 
-interface ProjectPackageJson {
+export interface ProjectPackageJson {
   name?: string;
   version?: string;
   scripts?: {
@@ -36,6 +36,7 @@ interface BuilderMetadata {
   versionCode: number;
   versionName: string;
   webViewDebug: boolean;
+  devUrl?: string;
   keystore: {
     path: string;
     alias: string;
@@ -44,7 +45,7 @@ interface BuilderMetadata {
   };
 }
 
-interface BuilderIO {
+export interface BuilderIO {
   inputDir: string;
   outputDir: string;
 }
@@ -145,7 +146,7 @@ export async function buildCommand(options: CliOptions): Promise<void> {
   }
 }
 
-async function ensureDockerReady(): Promise<void> {
+export async function ensureDockerReady(): Promise<void> {
   try {
     await execa('docker', ['--version'], { stdio: 'pipe' });
   } catch {
@@ -161,7 +162,7 @@ async function ensureDockerReady(): Promise<void> {
   }
 }
 
-async function pullBuilderImage(image: string): Promise<void> {
+export async function pullBuilderImage(image: string): Promise<void> {
   try {
     await execa('docker', ['pull', image], { stdio: 'pipe' });
   } catch (error) {
@@ -177,7 +178,7 @@ async function pullBuilderImage(image: string): Promise<void> {
   }
 }
 
-async function runBuilderContainer(image: string, io: BuilderIO): Promise<void> {
+export async function runBuilderContainer(image: string, io: BuilderIO): Promise<void> {
   const dockerArgs = [
     'run',
     '--rm',
@@ -204,7 +205,7 @@ async function runBuilderContainer(image: string, io: BuilderIO): Promise<void> 
   }
 }
 
-async function prepareBuilderInput(params: {
+export async function prepareBuilderInput(params: {
   cwd: string;
   webDistDir: string;
   packageName: string;
@@ -212,6 +213,7 @@ async function prepareBuilderInput(params: {
   versionCode: number;
   versionName: string;
   webViewDebug: boolean;
+  devUrl?: string;
   keystorePath: string;
 }): Promise<BuilderIO> {
   const rootDir = path.join(params.cwd, CONTAINER_BUILD_DIR);
@@ -238,6 +240,7 @@ async function prepareBuilderInput(params: {
     versionCode: params.versionCode,
     versionName: params.versionName,
     webViewDebug: params.webViewDebug,
+    devUrl: params.devUrl,
     keystore: {
       path: path.posix.join('keystore', copiedKeystoreName),
       alias: signing.alias,
@@ -256,7 +259,7 @@ async function prepareBuilderInput(params: {
   return { inputDir, outputDir };
 }
 
-async function resolveKeystorePath(cwd: string, config: PortlConfig): Promise<string> {
+export async function resolveKeystorePath(cwd: string, config: PortlConfig): Promise<string> {
   const configuredPath = path.resolve(cwd, config.keystorePath);
   if (await fs.pathExists(configuredPath)) {
     return configuredPath;

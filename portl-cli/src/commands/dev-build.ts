@@ -1,26 +1,30 @@
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora, { type Ora } from 'ora';
-import { getApkBuffer, openApk, patchManifest } from '../utils/apk.js';
-import { ensureKeystore, signApk } from '../utils/keystore.js';
+import { DEFAULT_BUILDER_IMAGE } from '../utils/builderConfig.js';
+import { bundleDrizzleMigrations } from '../utils/drizzleMigrations.js';
 import { getLocalIP } from '../utils/network.js';
 import { loadOrCreateConfig } from '../utils/portlConfig.js';
 import { getVersionInfo } from '../utils/versioning.js';
-import { bundleDrizzleMigrations } from '../utils/drizzleMigrations.js';
+import {
+  ensureDockerReady,
+  prepareBuilderInput,
+  pullBuilderImage,
+  resolveKeystorePath,
+  runBuilderContainer,
+  type ProjectPackageJson,
+} from './build.js';
 
 interface CliOptions {
   verbose?: boolean;
+  builderImage?: string;
+  noPull?: boolean;
+  pull?: boolean;
+  webviewDebug?: boolean;
 }
 
-interface ProjectPackageJson {
-  name?: string;
-  version?: string;
-}
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const DEV_WEB_DIST_DIR = path.join('.portl', 'dev-dist');
 
 export async function devBuildCommand(options: CliOptions): Promise<void> {
   const cwd = process.cwd();
@@ -34,9 +38,14 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
 
     const packageJson = (await fs.readJSON(packageJsonPath)) as ProjectPackageJson;
     const config = await loadOrCreateConfig(cwd);
+    const builderImage = options.builderImage?.trim() || DEFAULT_BUILDER_IMAGE;
     const localIP = getLocalIP();
     const devUrl = `http://${localIP}:5173`;
     const versionInfo = getVersionInfo(packageJson, config);
+
+    spinner = ora('Checking Docker...').start();
+    await ensureDockerReady();
+    spinner.succeed('Docker is available');
 
     spinner = ora('Bundling Drizzle migrations...').start();
     const drizzleBundle = await bundleDrizzleMigrations(cwd);
@@ -46,29 +55,38 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
       spinner.succeed(`Drizzle migrations ${drizzleBundle.status}`);
     }
 
-    spinner = ora('Packaging APK...').start();
-    const assetsDir = path.resolve(__dirname, '../assets');
-    const shellApkPath = await resolveDevShellApkPath(assetsDir);
-    const zip = openApk(shellApkPath);
-    zip.addFile(
-      'assets/www/portl-config.json',
-      Buffer.from(JSON.stringify({ devUrl }), 'utf8'),
-    );
-    patchManifest(zip, {
+    const webDistDir = await prepareDevWebDist(cwd);
+    const keystorePath = await resolveKeystorePath(cwd, config);
+    const io = await prepareBuilderInput({
+      cwd,
+      webDistDir,
       packageName: config.packageName,
       appLabel: packageJson.name ?? 'portl-app',
       versionCode: versionInfo.versionCode,
       versionName: versionInfo.versionName,
+      webViewDebug: options.webviewDebug !== false,
+      devUrl,
+      keystorePath,
     });
-    spinner.succeed('Packaging complete');
 
-    spinner = ora('Signing APK...').start();
-    const keystoreInfo = await ensureKeystore(path.join(cwd, '.portl'));
-    const signedApk = await signApk(getApkBuffer(zip), keystoreInfo);
+    if (options.pull !== false) {
+      spinner = ora(`Pulling builder image (${builderImage})...`).start();
+      await pullBuilderImage(builderImage);
+      spinner.succeed('Builder image ready');
+    }
+
+    spinner = ora('Building dev APK in container...').start();
+    await runBuilderContainer(builderImage, io);
+    spinner.succeed('Container build complete');
+
+    const builtApkPath = path.join(io.outputDir, 'app.apk');
+    if (!(await fs.pathExists(builtApkPath))) {
+      throw new Error('Builder container did not produce app.apk');
+    }
+
     const outputPath = path.join(cwd, 'dist', 'app-dev.apk');
     await fs.ensureDir(path.dirname(outputPath));
-    await fs.writeFile(outputPath, signedApk);
-    spinner.succeed('Signing complete');
+    await fs.copyFile(builtApkPath, outputPath);
 
     console.log(chalk.green('✅ Dev APK → ./dist/app-dev.apk'));
     console.log('');
@@ -78,7 +96,7 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
     console.log('Then start developing:');
     console.log('  npx portl dev');
     console.log('');
-    console.log('Your app will live-reload. Keep your phone on the same WiFi.');
+    console.log(`Your app will load ${devUrl} and live-reload. Keep your phone on the same WiFi.`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (spinner) {
@@ -94,18 +112,13 @@ export async function devBuildCommand(options: CliOptions): Promise<void> {
   }
 }
 
-async function resolveDevShellApkPath(assetsDir: string): Promise<string> {
-  const devShellApkPath = path.join(assetsDir, 'portl-shell-dev.apk');
-  if (await fs.pathExists(devShellApkPath)) {
-    return devShellApkPath;
-  }
-
-  const fullShellApkPath = path.join(assetsDir, 'portl-shell-full.apk');
-  if (await fs.pathExists(fullShellApkPath)) {
-    return fullShellApkPath;
-  }
-
-  throw new Error(
-    'Shell APK not found. Expected dist/assets/portl-shell-dev.apk or dist/assets/portl-shell-full.apk.',
+async function prepareDevWebDist(cwd: string): Promise<string> {
+  const webDistDir = path.join(cwd, DEV_WEB_DIST_DIR);
+  await fs.emptyDir(webDistDir);
+  await fs.writeFile(
+    path.join(webDistDir, 'index.html'),
+    '<!doctype html><html><head><meta charset="utf-8"><title>Portl Dev</title></head><body></body></html>\n',
+    'utf8',
   );
+  return webDistDir;
 }
