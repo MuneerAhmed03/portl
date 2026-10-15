@@ -22,7 +22,7 @@
 
 - Keep schema definitions in one place.
 - Use idempotent creation/migration logic.
-- For Drizzle, call `initDB({ migrations })` exactly once per app startup.
+- For Drizzle, prefer `createPortlDrizzle({ schema, migrations })`; it runs migrations once before the first query.
 
 ## 5. Design for evolution
 
@@ -41,4 +41,3 @@
 - Test repository behavior, not ORM internals.
 - Include bootstrap idempotency tests.
 - Include read/write round-trip tests for key-value wrappers.
-

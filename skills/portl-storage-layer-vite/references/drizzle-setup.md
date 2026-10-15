@@ -67,6 +67,8 @@ The bundler writes `src/data/db/migrations.generated.ts` by default. It uses `.p
 
 `createPortlDrizzle({ schema, migrations })` runs migrations lazily before the first query, so repositories can use the exported `db` like a normal Drizzle client.
 
+`RETURNING` queries are passed through to SQLite. Browser `sql.js` supports them when its SQLite engine does; Android support depends on the SQLite version available on the device.
+
 ## Repository pattern (Drizzle path)
 
 ```ts
